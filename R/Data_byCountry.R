@@ -26,14 +26,15 @@ CO_Cut=quantile(CO_data4$CO_Value,0.99)
 CO_data4=filter(CO_data4,CO_Value>=0&CO_Value<CO_Cut)
 CO_data4=mutate(CO_data4,POC=sprintf("%02d",CO_data4$POC))
 CO_data5=mutate(CO_data4,FIPS=paste(CO_data4$State.Code,CO_data4$County.Code,CO_data4$Site.Num,sep=''),
-		FIPSPOC=paste(CO_data4$State.Code,CO_data4$County.Code,CO_data4$Site.Num,CO_data4$POC,sep='')
-		) %>% select(.,FIPS,Date.Local,CO_Value,POC,Latitude,Longitude) 
+		FIPSPOC=paste(CO_data4$State.Code,CO_data4$County.Code,CO_data4$Site.Num,CO_data4$POC,sep='')) %>% 
+		select(FIPS,Date.Local,CO_Value,POC,Latitude,Longitude) 
 CO_data6=data.table(CO_data5)
 setkey(CO_data6,FIPS,Date.Local)
 #Take average by FIPS
-CO_data7=CO_data6[,list(CO=mean(CO_Value)),by=c("FIPS","Date.Local")]
-CO_data=data.table(CO_data7)
-setkey(CO_data,FIPS,Date.Local)
+CO_data7=data.table(CO_data6[,list(CO_level=mean(CO_Value)),by=c("FIPS","Date.Local")]) %>% mutate(FIPS_County=substr(FIPS,1,5))
+setkey(CO_data7,FIPS_County,Date.Local)
+#Take Average by county
+CO_data=CO_data7[,list(CO=mean(CO_level)),by=c("FIPS_County","Date.Local")]
 rm(list=setdiff(ls(), c('CO_data')))
  
 #############
@@ -52,14 +53,15 @@ NO2_Cut=quantile(NO2_data4$NO2_Value,0.99)
 NO2_data4=filter(NO2_data4,NO2_Value>=0&NO2_Value<NO2_Cut)
 NO2_data4=mutate(NO2_data4,POC=sprintf("%02d",NO2_data4$POC))
 NO2_data5=mutate(NO2_data4,FIPS=paste(NO2_data4$State.Code,NO2_data4$County.Code,NO2_data4$Site.Num,sep=''),
-		FIPSPOC=paste(NO2_data4$State.Code,NO2_data4$County.Code,NO2_data4$Site.Num,NO2_data4$POC,sep='')
-		) %>% select(.,FIPS,Date.Local,NO2_Value,POC,Latitude,Longitude) 
+		FIPSPOC=paste(NO2_data4$State.Code,NO2_data4$County.Code,NO2_data4$Site.Num,NO2_data4$POC,sep='')) %>% 
+		select(FIPS,Date.Local,NO2_Value,POC,Latitude,Longitude) 
 NO2_data6=data.table(NO2_data5)
 setkey(NO2_data6,FIPS,Date.Local)
 #Take average by FIPS
-NO2_data7=NO2_data6[,list(NO2=mean(NO2_Value)),by=c("FIPS","Date.Local")]
-NO2_data=data.table(NO2_data7)
-setkey(NO2_data,FIPS,Date.Local)
+NO2_data7=data.table(NO2_data6[,list(NO2_level=mean(NO2_Value)),by=c("FIPS","Date.Local")]) %>% mutate(FIPS_County=substr(FIPS,1,5))
+setkey(NO2_data7,FIPS_County,Date.Local)
+#Take Average by county
+NO2_data=NO2_data7[,list(NO2=mean(NO2_level)),by=c("FIPS_County","Date.Local")]
 rm(list=setdiff(ls(), c('CO_data','NO2_data')))
  
 #############
@@ -78,14 +80,15 @@ SO2_Cut=quantile(SO2_data4$SO2_Value,0.99)
 SO2_data4=filter(SO2_data4,SO2_Value>=0&SO2_Value<SO2_Cut)
 SO2_data4=mutate(SO2_data4,POC=sprintf("%02d",SO2_data4$POC))
 SO2_data5=mutate(SO2_data4,FIPS=paste(SO2_data4$State.Code,SO2_data4$County.Code,SO2_data4$Site.Num,sep=''),
-		FIPSPOC=paste(SO2_data4$State.Code,SO2_data4$County.Code,SO2_data4$Site.Num,SO2_data4$POC,sep='')
-		) %>% select(.,FIPS,Date.Local,SO2_Value,POC,Latitude,Longitude) 
+		FIPSPOC=paste(SO2_data4$State.Code,SO2_data4$County.Code,SO2_data4$Site.Num,SO2_data4$POC,sep='')) %>% 
+		select(FIPS,Date.Local,SO2_Value,POC,Latitude,Longitude) 
 SO2_data6=data.table(SO2_data5)
 setkey(SO2_data6,FIPS,Date.Local)
 #Take average by FIPS
-SO2_data7=SO2_data6[,list(SO2=mean(SO2_Value)),by=c("FIPS","Date.Local")]
-SO2_data=data.table(SO2_data7)
-setkey(SO2_data,FIPS,Date.Local)
+SO2_data7=data.table(SO2_data6[,list(SO2_level=mean(SO2_Value)),by=c("FIPS","Date.Local")]) %>% mutate(FIPS_County=substr(FIPS,1,5))
+setkey(SO2_data7,FIPS_County,Date.Local)
+#Take Average by county
+SO2_data=SO2_data7[,list(SO2=mean(SO2_level)),by=c("FIPS_County","Date.Local")]
 rm(list=setdiff(ls(), c('CO_data','NO2_data','SO2_data')))
  
 #############
@@ -104,14 +107,15 @@ PM10_Cut=quantile(PM10_data4$PM10_Value,0.99)
 PM10_data4=filter(PM10_data4,PM10_Value>=0&PM10_Value<PM10_Cut)
 PM10_data4=mutate(PM10_data4,POC=sprintf("%02d",PM10_data4$POC))
 PM10_data5=mutate(PM10_data4,FIPS=paste(PM10_data4$State.Code,PM10_data4$County.Code,PM10_data4$Site.Num,sep=''),
-		FIPSPOC=paste(PM10_data4$State.Code,PM10_data4$County.Code,PM10_data4$Site.Num,PM10_data4$POC,sep='')
-		) %>% select(.,FIPS,Date.Local,PM10_Value,POC,Latitude,Longitude) 
+		FIPSPOC=paste(PM10_data4$State.Code,PM10_data4$County.Code,PM10_data4$Site.Num,PM10_data4$POC,sep='')) %>% 
+		select(FIPS,Date.Local,PM10_Value,POC,Latitude,Longitude) 
 PM10_data6=data.table(PM10_data5)
 setkey(PM10_data6,FIPS,Date.Local)
 #Take average by FIPS
-PM10_data7=PM10_data6[,list(PM10=mean(PM10_Value)),by=c("FIPS","Date.Local")]
-PM10_data=data.table(PM10_data7)
-setkey(PM10_data,FIPS,Date.Local)
+PM10_data7=data.table(PM10_data6[,list(PM10_level=mean(PM10_Value)),by=c("FIPS","Date.Local")]) %>% mutate(FIPS_County=substr(FIPS,1,5))
+setkey(PM10_data7,FIPS_County,Date.Local)
+#Take Average by county
+PM10_data=PM10_data7[,list(PM10=mean(PM10_level)),by=c("FIPS_County","Date.Local")]
 rm(list=setdiff(ls(), c('CO_data','NO2_data','SO2_data','PM10_data','PM10_data6')))
 
 #############
@@ -130,14 +134,15 @@ PM25_Cut=quantile(PM25_data4$PM25_Value,0.99)
 PM25_data4=filter(PM25_data4,PM25_Value>=0&PM25_Value<PM25_Cut)
 PM25_data4=mutate(PM25_data4,POC=sprintf("%02d",PM25_data4$POC))
 PM25_data5=mutate(PM25_data4,FIPS=paste(PM25_data4$State.Code,PM25_data4$County.Code,PM25_data4$Site.Num,sep=''),
-		FIPSPOC=paste(PM25_data4$State.Code,PM25_data4$County.Code,PM25_data4$Site.Num,PM25_data4$POC,sep='')
-		) %>% select(.,FIPS,Date.Local,PM25_Value,POC,Latitude,Longitude) 
+		FIPSPOC=paste(PM25_data4$State.Code,PM25_data4$County.Code,PM25_data4$Site.Num,PM25_data4$POC,sep='')) %>% 
+		select(FIPS,Date.Local,PM25_Value,POC,Latitude,Longitude) 
 PM25_data6=data.table(PM25_data5)
 setkey(PM25_data6,FIPS,Date.Local)
 #Take average by FIPS
-PM25_data7=PM25_data6[,list(PM25=mean(PM25_Value)),by=c("FIPS","Date.Local")]
-PM25_data=data.table(PM25_data7)
-setkey(PM25_data,FIPS,Date.Local)
+PM25_data7=data.table(PM25_data6[,list(PM25_level=mean(PM25_Value)),by=c("FIPS","Date.Local")]) %>% mutate(FIPS_County=substr(FIPS,1,5))
+setkey(PM25_data7,FIPS_County,Date.Local)
+#Take Average by county
+PM25_data=PM25_data7[,list(PM25=mean(PM25_level)),by=c("FIPS_County","Date.Local")]
 rm(list=setdiff(ls(), c('CO_data','NO2_data','SO2_data','PM25_data','PM25_data6','PM10_data','PM10_data6')))
 
 #############
@@ -145,29 +150,25 @@ rm(list=setdiff(ls(), c('CO_data','NO2_data','SO2_data','PM25_data','PM25_data6'
 #This is different from what I created in GIS or trend map.
 ############# 
 
-PMCoarse_data=merge(PM10_data6,PM25_data6,by=c('FIPS','Date.Local')) %>% 
-	mutate(.,PMCoarse=PM10_Value-PM25_Value) %>%
-	select(.,FIPS,Date.Local,PMCoarse) %>%
-	filter(.,PMCoarse>=0)
-rm(PM25_data6,PM10_data6)
+PMCoarse_data2=merge(PM10_data6,PM25_data6,by=c('FIPS','Date.Local')) %>% 
+	mutate(PMCoarse_level=PM10_Value-PM25_Value) %>%
+	select(FIPS,Date.Local,PMCoarse_level) %>%
+	filter(PMCoarse_level>=0) %>%
+	mutate(FIPS_County=substr(FIPS,1,5))
+setkey(PMCoarse_data2,FIPS_County,Date.Local)
+PMCoarse_data=PMCoarse_data2[,list(PMCoarse=mean(PMCoarse_level)),by=c("FIPS_County","Date.Local")]
+rm(PM25_data6,PM10_data6,PMCoarse_data2)
 
 #############
 #Merge All data
 ############# 
 ptm=proc.time()
-dd=merge(CO_data,NO2_data,by=c('FIPS','Date.Local'),all=TRUE) %>%
-	merge(.,SO2_data,by=c('FIPS','Date.Local'),all=TRUE) %>%
-	merge(.,PM10_data,by=c('FIPS','Date.Local'),all=TRUE) %>%
-	merge(.,PM25_data,by=c('FIPS','Date.Local'),all=TRUE) %>%
-	merge(.,PMCoarse_data,by=c('FIPS','Date.Local'),all=TRUE)
-
-
-State_FIPS=read.csv('state_geocodes.csv')
-names(State_FIPS)[5:6]=c('RegionName','DivisionName')
-State_FIPS$State.Code=sprintf("%02d",State_FIPS$St_FIPS)
-State_FIPS=State_FIPS[order(State_FIPS$State.Code),]
-State_Table=data.table(State_FIPS[,c('Name','State.Code','Region','RegionName','Division','DivisionName')])
-
-
+AirData=merge(CO_data,NO2_data,by=c('FIPS_County','Date.Local'),all=TRUE) %>%
+	merge(.,SO2_data,by=c('FIPS_County','Date.Local'),all=TRUE) %>%
+	merge(.,PM10_data,by=c('FIPS_County','Date.Local'),all=TRUE) %>%
+	merge(.,PM25_data,by=c('FIPS_County','Date.Local'),all=TRUE) %>%
+	merge(.,PMCoarse_data,by=c('FIPS_County','Date.Local'),all=TRUE)
+proc.time()-ptm
+save(AirData,file='AirData_20141206.Rdata')
 
 rm(list=ls())
