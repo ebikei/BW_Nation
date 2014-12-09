@@ -36,22 +36,40 @@ setkey(PMCoarse_Data2,FIPS_County,Date.Local)
 PMCoarse_Data3=PMCoarse_Data2[CJ(unique(FIPS_County),seq(min(Date.Local),max(Date.Local),by=1))]
 PMCoarse_Data3[,PMCoarse_Week:=rollapply(PMCoarse,7,mean,align=c("right"),fill=NA,na.rm=TRUE),by=FIPS_County]
 PMCoarse_Data3$PMCoarse_Week[is.nan(PMCoarse_Data3$PMCoarse_Week)]=NA
+PMCoarse_Data3$CO<-PMCoarse_Data3$NO2<-PMCoarse_Data3$SO2<-PMCoarse_Data3$PM10<-PMCoarse_Data3$PM25<-PMCoarse_Data3$n<-PMCoarse_Data3$PMCoarse<-NULL
+rm(list=setdiff(ls(), c('PMCoarse_Data3')))
+
+BirthList=data.table(read.csv('BirthOutcomeFips_Gest_Combination.csv'))
+BirthList$FIPS_County=sprintf("%05d",BirthList$res_fips)
+BirthList$dgestat=NULL
+BirthList$res_fips=NULL
+setkey(BirthList,FIPS_County)
+
+CountyList=PMCoarse_Data3[!duplicated(PMCoarse_Data3$FIPS_County),list(FIPS_County)]
+BirthList2=merge(BirthList,CountyList,by='FIPS_County',all.y=TRUE)
+rm(BirthList)
+
+BirthList2$temp=as.Date(paste(substr(BirthList2$LMPDate,1,4),substr(BirthList2$LMPDate,5,6),substr(BirthList2$LMPDate,7,8),sep='-'),"%Y-%m-%d")
+
+DataMatrix=matrix(0,nrow=dim(BirthList2)[1],ncol=50)
+
+#i=1
+for (i in 1:50){
+BirthList3=mutate(BirthList2,temp2=temp+i*7-1)
+setkey(BirthList3,FIPS_County,temp2)
+test=PMCoarse_Data3[BirthList3]
+DataMatrix[,i]=test$PMCoarse_Week
+rm(BirthList3,test)
+}
+
+BirthList4=cbind(data.frame(BirthList2),data.frame(DataMatrix))
+names=paste(rep('Week',50),1:50,sep='')
+colnames(BirthList4)[4:53]=names
+
+for (i in 30:50){
+BirthList4[[paste0('GestWeek_',i)]]=rowMeans(BirthList4[,c(4:i)],na.rm=TRUE)
+}
 
 
 
-
-z <- zoo(rep(c(3,NA,7,2,5),7), as.Date(31:65))
-z
-rollapply(z, 3, mean)
-rollapply(z, 3, mean,align=c("center"))
-rollapply(z, 3, mean,na.rm=TRUE,fill=NA)
-rollapply(z, 3, mean,na.rm=TRUE,fill=TRUE)
-
-rollapply(z, 3, mean,align=c("left"))
-rollapply(z, 3, mean,na.rm=TRUE,fill=NA)
-rollapply(z, 3, mean,na.rm=TRUE,fill=TRUE)
-rollapply(z, 3, mean,align=c("right"),fill=NA)
-rollapply(z, 3, mean,align=c("right"),fill=NA,na.rm=TRUE)
-
-
-rm(list==ls())
+rm(list=ls())
