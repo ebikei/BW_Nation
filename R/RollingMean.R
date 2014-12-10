@@ -40,17 +40,15 @@ PMCoarse_Data3$PMCoarse_Week[is.nan(PMCoarse_Data3$PMCoarse_Week)]=NA
 PMCoarse_Data3$CO<-PMCoarse_Data3$NO2<-PMCoarse_Data3$SO2<-PMCoarse_Data3$PM10<-PMCoarse_Data3$PM25<-PMCoarse_Data3$n<-NULL
 rm(list=setdiff(ls(), c('PMCoarse_Data3')))
 
-BirthList=data.table(read.csv('BirthOutcomeFips_Gest_Combination.csv'))
+BirthList=fread('BirthOutcomeFips_LMP_Combination.csv')
 BirthList$FIPS_County=sprintf("%05d",BirthList$res_fips)
 BirthList$LMPDate2=as.Date(paste(substr(BirthList$LMPDate,1,4),substr(BirthList$LMPDate,5,6),substr(BirthList$LMPDate,7,8),sep='-'),"%Y-%m-%d")
-BirthList$dgestat=NULL
 BirthList$res_fips=NULL
 setkey(BirthList,FIPS_County,LMPDate2)
-BirthList1=subset(unique(BirthList))
 
 CountyList=PMCoarse_Data3[!duplicated(PMCoarse_Data3$FIPS_County),list(FIPS_County)]
-BirthList2=merge(BirthList1,CountyList,by='FIPS_County',all.y=TRUE)
-rm(BirthList,BirthList1)
+BirthList2=merge(BirthList,CountyList,by='FIPS_County',all.y=TRUE)
+rm(BirthList)
 
 DataMatrix=matrix(0,nrow=dim(BirthList2)[1],ncol=50)
 
@@ -77,5 +75,9 @@ BirthList4$First_ObsWks=apply(BirthList4,1,function(f) sum(!is.na(f[4:16])))
 BirthList4$Second_ObsWks=apply(BirthList4,1,function(f) sum(!is.na(f[17:29])))
 
 BirthList5=filter(BirthList4,First_ObsWks>9,Second_ObsWks>9)
+table(substr(BirthList5$FIPS_County,1,2))
+table(substr(BirthList5$LMPDate,1,4))
+
+BirthList5$GestWeek_30=ifelse(apply(BirthList5,1,function(f) sum(!is.na(f[30:33])))<3,NA,BirthList5$GestWeek_30)
 
 rm(list=ls())
