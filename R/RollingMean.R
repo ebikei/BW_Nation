@@ -85,5 +85,11 @@ for (i in 30:50){
 BirthList5[,c(i+24)]=ifelse(apply(BirthList5,1,function(f) sum(!is.na(f[30:(i+3)])))<((i-26)*0.75),NA,BirthList5[,c(i+24)])
 }
 
-BirthList6=BirthList5[,c('FIPS_County','LMPDate2',c(54:74))]
+BirthList6=BirthList5[,c(1,3,54:74)]
+BirthList6$Index=apply(BirthList6,1,function(f) sum(!is.na(f[3:23])))
+BirthList6=filter(BirthList6,Index!=0)
+BirthList6$Index<-NULL
+#write.csv(BirthList6,'PMCoarse_Exposure.csv')
+save(BirthList6,file='PMCoarse_Exposure.RData')
+
 rm(list=ls())
