@@ -1,3 +1,4 @@
+
 x<-c('dplyr','data.table','zoo')
 lapply(x, require, character.only=T)
 
@@ -78,6 +79,11 @@ BirthList5=filter(BirthList4,First_ObsWks>9,Second_ObsWks>9)
 table(substr(BirthList5$FIPS_County,1,2))
 table(substr(BirthList5$LMPDate,1,4))
 
-BirthList5$GestWeek_30=ifelse(apply(BirthList5,1,function(f) sum(!is.na(f[30:33])))<3,NA,BirthList5$GestWeek_30)
+#BirthList5$GestWeek_30=ifelse(apply(BirthList5,1,function(f) sum(!is.na(f[30:33])))<3,NA,BirthList5$GestWeek_30)
+#i=30
+for (i in 30:50){
+BirthList5[,c(i+24)]=ifelse(apply(BirthList5,1,function(f) sum(!is.na(f[30:(i+3)])))<((i-26)*0.75),NA,BirthList5[,c(i+24)])
+}
 
+BirthList6=BirthList5[,c('FIPS_County','LMPDate2',c(54:74))]
 rm(list=ls())
