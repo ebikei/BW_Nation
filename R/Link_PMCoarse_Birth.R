@@ -64,7 +64,7 @@ for (i in 1:length(yearlist)){
 	Coef$Year=yearlist[i]
 	result=rbind(result,Coef)
 	temp=data.frame(DF3)
-	BWData_Coarse=rbind(BWData_Coarse,DF3)
+	BWData_Coarse=rbind(BWData_Coarse,temp)
 	rm(DF,DF2,DF3,Coef,temp)
 	setTxtProgressBar(pb, i)
 	}, error=function(e){})
