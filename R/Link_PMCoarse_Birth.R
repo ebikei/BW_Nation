@@ -16,7 +16,7 @@ yearlist=c(1998:2007)
 pb=txtProgressBar(min=0,max=length(yearlist), style = 3)
 ptm=proc.time()
 result=data.frame()
-
+BWData_Coarse=data.frame()
 for (i in 1:length(yearlist)){
 	tryCatch({
 	Sys.sleep(0.1)
@@ -58,17 +58,22 @@ for (i in 1:length(yearlist)){
 								ifelse(DF2$dgestat==50,Birth2002$GestWeek_50,
 								NA)))))))))))))))))))))
 	DF3=filter(DF2,!is.na(PMCoarse_Exposure)) %>%
-#				filter(.,substr(FIPS_County,1,2)=='09') %>%
+#				filter(.,substr(FIPS_County,1,2)=='12') %>%
 				select(FIPS_County,LMPDate2,BD_15,BD_Est,diff,PMCoarse_Exposure,dbirwt,dgestat,mage8,pldel3,mrace3,meduc6,dmar,totord9,monpre,nprevis,dfage,csex,dplural,fmaps,delmeth5,diabetes,tobacco,alcohol,wtgain,frace3)
 	Coef=data.frame(summary(lm(dbirwt~PMCoarse_Exposure,data=DF3))$coefficients)
 	Coef$Year=yearlist[i]
 	result=rbind(result,Coef)
-	rm(DF,DF2,DF3,Coef)
+	temp=data.frame(DF3)
+	BWData_Coarse=rbind(BWData_Coarse,DF3)
+	rm(DF,DF2,DF3,Coef,temp)
 	setTxtProgressBar(pb, i)
 	}, error=function(e){})
 }
 proc.time()-ptm
 close(pb)
+
+save(BWData_Coarse,file='BirthData/BWData_Coarse.RData')
+summary(lm(dbirwt~PMCoarse_Exposure,data=BWData_Coarse))
 
 rm(list=ls())
 
