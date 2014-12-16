@@ -28,7 +28,7 @@ for (i in 1:length(yearlist)){
 			BD_15=as.Date(paste(biryr,sprintf('%02d',birmon),15,sep='-'),'%Y-%m-%d')) %>%
 		select(FIPS_County,LMPDate2,BD_15,dbirwt,dgestat,mage8,pldel3,mrace3,meduc6,dmar,totord9,monpre,nprevis,dfage,csex,dplural,fmaps,delmeth5,diabetes,tobacco,alcohol,wtgain,frace3)
 
-	DF=filter(DF,dgestat>29,dgestat!=99,dbirwt>2500,dbirwt!=9999) %>%
+	DF=filter(DF,dgestat>29,dgestat!=99,dbirwt>1000,dbirwt<=5500,dbirwt!=9999) %>%
 			mutate(.,BD_Est=LMPDate2+dgestat*7,diff=abs(as.numeric(BD_Est-BD_15))) %>%
 			filter(.,diff<=30)
 	setkey(DF,FIPS_County,LMPDate2)
@@ -72,8 +72,30 @@ for (i in 1:length(yearlist)){
 proc.time()-ptm
 close(pb)
 
+
+BWData_Coarse$mage8=factor(BWData_Coarse$mage8,levels=c(1:9),labels=c('Under 15 years','15-19','20-24','25-29','30-34','35-39','40-44','45-49','50-54'))
+BWData_Coarse$pldel3=factor(BWData_Coarse$pldel3,levels=c(1:3),labels=c('InHospital','NotInHospital','Unknown'))
+BWData_Coarse$mrace3=factor(BWData_Coarse$mrace3,levels=c(1:3),labels=c('Caucasian','Other','AfricanAmerican'))
+BWData_Coarse$meduc6=factor(BWData_Coarse$meduc6,levels=c(1:6),labels=c('Under 8 years','9-11','12','13-15','16 Over','Unknown'))
+BWData_Coarse$dmar=factor(BWData_Coarse$dmar,levels=c(1,2,9),labels=c('Married','Unmarried','Unknown'))
+BWData_Coarse$totord9=factor(BWData_Coarse$totord9,levels=c(1:9),labels=c('First','Second','Third','Fourth','Fifth','Sixth','Seventh','Eighth more','Unknown'))
+BWData_Coarse$monpre=factor(BWData_Coarse$monpre,levels=c(0:9,99),labels=c('No Prenatal Care','1st month','2nd month','3rd month','4th month','5th month','6th month','7th month','8th month','9th month','Unknown'))
+BWData_Coarse$nprevis[BWData_Coarse$nprevis==99]=NA
+BWData_Coarse$dfage[BWData_Coarse$dfage==99]=NA
+BWData_Coarse$csex=factor(BWData_Coarse$csex,levels=c(1:2),labels=c('Male','Female'))
+BWData_Coarse$dplural=factor(BWData_Coarse$dplural,levels=c(1:5),labels=c('Single','Twin','Triplet','Quadruplet','Higher'))
+BWData_Coarse$fmaps[BWData_Coarse$fmaps==99]=NA
+BWData_Coarse$delmeth5=factor(BWData_Coarse$delmeth5,levels=c(1:5),labels=c('Vaginal','Vaginal after C-section','Primary C-section','Repeat C-section','Unknown'))
+BWData_Coarse$diabetes=factor(BWData_Coarse$diabetes,levels=c(1:2,9),labels=c('Yes','No','Unknown'))
+BWData_Coarse$tobacco=factor(BWData_Coarse$tobacco,levels=c(1:2,9),labels=c('Yes','No','Unknown'))
+BWData_Coarse$alcohol=factor(BWData_Coarse$alcohol,levels=c(1:2,9),labels=c('Yes','No','Unknown'))
+BWData_Coarse$wtgain[BWData_Coarse$wtgain==99]=NA
+BWData_Coarse$frace3=factor(BWData_Coarse$frace3,levels=c(1:4),labels=c('Caucasian','Other','AfricanAmerican','Unknown'))
+summary(BWData_Coarse)
+
 save(BWData_Coarse,file='BirthData/BWData_Coarse.RData')
-summary(lm(dbirwt~PMCoarse_Exposure,data=BWData_Coarse))
+
+summary(lm(dbirwt~PMCoarse_Exposure+csex,data=BWData_Coarse))
 
 rm(list=ls())
 
