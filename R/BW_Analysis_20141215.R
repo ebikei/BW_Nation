@@ -40,10 +40,23 @@ bwdata$season=factor(ifelse(format(bwdata$BD_15,"%b") %in% spring,'Spring',
 			ifelse(format(bwdata$BD_15,"%b") %in% summer,'Summer',
 			ifelse(format(bwdata$BD_15,"%b") %in% autumn,'Autumn','Winter'))))
 bwdata$season=relevel(bwdata$season,ref='Spring')
-bwdata$State.Code=substr(bwdata$FIPS_County,1,2)
+bwdata$S
+tate.Code=substr(bwdata$FIPS_County,1,2)
 bwdata=data.table(bwdata)
 setkey(bwdata,State.Code)
 bwdata=merge(bwdata,State_FIPS,by='State.Code')
+
+BWByState=data.frame(table(bwdata$Name))
+names(BWByState)=c('Name','BWNumber')
+MonitorNumber=data.frame(table(substr(unique(bwdata$FIPS_County),1,2)))
+names(MonitorNumber)=c('State.Code','CountyNumber')
+List=merge(State_FIPS,MonitorNumber,by='State.Code') %>%
+	 merge(.,BWByState,by='Name') %>%
+	 select(.,State.Code,Name,RegionName,DivisionName,CountyNumber,BWNumber)
+#write.csv(List,paste(output_location,'FreqList.csv',sep=''))
+table(bwdata$RegionName)
+table(bwdata$DivisionName)
+
 
 group_by(bwdata,RegionName) %>%
 	summarise(PMCoarse=mean(PMCoarse_Exposure,na.rm=TRUE),PMCoarse_Sd=sd(PMCoarse_Exposure,na.rm=TRUE),PMCoarse_IQR=IQR(PMCoarse_Exposure,na.rm=TRUE))
@@ -58,5 +71,9 @@ summary(lm(dbirwt~PMCoarse_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totor
 
 bwdata2=filter(bwdata,DivisionName=='Pacific')
 summary(lm(dbirwt~PMCoarse_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season,data=bwdata2))
+
+bwdata2=filter(bwdata,Name=='California')
+summary(lm(dbirwt~PMCoarse_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season,data=bwdata2))
+
 
 rm(list=ls())
