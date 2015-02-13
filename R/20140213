@@ -1,0 +1,257 @@
+tt=filter(PM10_25_MatchList,substr(PM10_FIPS,1,5)=='12011') %>% select(PM10_FIPS)
+tt2=unique(tt$PM10_FIPS)
+
+tt=filter(PM25_data6,substr(PM25_FIPS,1,5)=='04019') %>%
+filter(.,!duplicated(PM25_FIPS))
+
+
+filter(PM25_data6,substr(PM25_FIPS,1,5)=='04019') %>%
+group_by(.,PM25_FIPS) %>%
+summarize(.,pmmean=mean(PM25_Value,na.rm=TRUE))
+
+
+t=group_by(PM25_data6,PM25_FIPS) %>%
+summarize(.,pmmean=mean(PM25_Value,na.rm=TRUE)) %>%
+arrange(.,pmmean) %>%
+data.frame() 
+
+
+bwdata4=filter(bwdata,FIPS_County=='08041')
+#Co-pollutant model
+Model3=biglm(dbirwt~PMCoarse_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata4)
+summary(Model3)
+
+
+summary(bwdata$PM25_Exposure)
+bwdata5=filter(bwdata,PM25_Exposure<8)
+#Co-pollutant model
+Model3=biglm(dbirwt~PMCoarse_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata5)
+summary(Model3)
+
+
+State_List=unique(bwdata$Name)
+out=data.frame()
+
+for (i in 1:length(State_List)){
+bwdata2=filter(bwdata,Name==State_List[i])
+Model3=glm(LBW~PMCoarse_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+year+season+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata2,family="binomial")
+test=data.frame(State_List[i],summary(Model3)$coefficients[c(2:3),])
+test$Pol=c('PMCoarse','PM25')
+out=rbind(out,test)
+rm(bwdaa2,Model3,test)
+}
+
+row.names(out)=c(1:dim(out)[1])
+names(out)=c('State','PE','SD','t','Pvalue','Pol')
+
+
+##National Effect
+#PMCoarse
+IQR=8.17
+PMCoarseEffect=filter(out,Pol=='PMCoarse') %>%
+mutate(.,Effect=exp(PE*IQR),LCI=exp((PE-1.96*SD)*IQR),UCI=exp((PE+1.96*SD)*IQR),CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,State,Effect,CIs,round(Pvalue,4),PE,SD) %>%
+arrange(.,-(Effect))
+comb=tlnise(PMCoarseEffect$PE,PMCoarseEffect$SD^2, seed = 1234)
+Result1=data.frame(comb$gamma) %>%
+mutate(.,Effect=exp(est*IQR),LCI=exp((est-1.96*se)*IQR),UCI=exp((est+1.96*se)*IQR),CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,Effect,CIs)
+Result1
+
+#PM25
+IQR=4.67
+PM25Effect=filter(out,Pol=='PM25') %>%
+mutate(.,Effect=exp(PE*IQR),LCI=exp((PE-1.96*SD)*IQR),UCI=exp((PE+1.96*SD)*IQR),CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,State,Effect,CIs,round(Pvalue,4),PE,SD) %>%
+arrange(.,-(Effect))
+comb=tlnise(PM25Effect$PE,PM25Effect$SD^2, seed = 1234)
+Result2=data.frame(comb$gamma) %>%
+mutate(.,Effect=exp(est*IQR),LCI=exp((est-1.96*se)*IQR),UCI=exp((est+1.96*se)*IQR),CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,Effect,CIs)
+Result2
+
+
+load('County_TLNise.RData') #out2
+load('NBH_Stat.RData') #NBH_Stat
+out2$FIPS_County=as.character(out2$FIPS_County)
+out2$State.Code=substr(out2$FIPS_County,1,2)
+out3=inner_join(out2,NBH_Stat,by='FIPS_County') %>%
+filter(.,Pol=='PM25',Numb>3000) %>%
+inner_join(.,State_FIPS,by='State.Code') %>%
+mutate(.,Effect=round(PE*IQR,2),LCI=(PE-1.96*SD)*IQR,UCI=(PE+1.96*SD)*IQR,CIs=paste(Effect,' [',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,FIPS_County,CIs,Pvalue,Pol,State.Code,LessThanHS,LessThanPov_Line,Unemployment,Name,RegionName,DivisionName,Effect,PE,SD,Numb)
+comb=tlnise(out3$PE,out3$SD^2, seed = 1234)
+Result1=data.frame(comb$gamma) %>%
+mutate(.,Effect=(est*IQR),LCI=((est-1.96*se)*IQR),UCI=((est+1.96*se)*IQR),CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,Effect,CIs)
+Result1
+
+
+PM2=filter(out3,Pol=='PM25',RegionName=='West') %>% arrange(.,Effect)
+
+
+
+
+
+
+
+
+
+
+
+
+
+IQR=4.67
+
+load('County_TLNise.RData') #out2
+load('NBH_Stat.RData') #NBH_Stat
+out2$FIPS_County=as.character(out2$FIPS_County)
+out2$State.Code=substr(out2$FIPS_County,1,2)
+out3=inner_join(out2,NBH_Stat,by='FIPS_County') %>%
+filter(.,Pol=='PM25') %>%
+inner_join(.,State_FIPS,by='State.Code') %>%
+mutate(.,Effect=round(PE*IQR,2),LCI=(PE-1.96*SD)*IQR,UCI=(PE+1.96*SD)*IQR,CIs=paste(Effect,' [',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,FIPS_County,CIs,Pvalue,Pol,State.Code,LessThanHS,LessThanPov_Line,Unemployment,Name,RegionName,DivisionName,Effect,PE,SD,Numb)
+
+PMC=filter(out3,Effect<15,Numb>1000) %>%
+#PMC=filter(out3,FIPS_County!='06071',FIPS_County!='32003',Numb>1000) %>%
+#PMC=filter(out3,!(FIPS_County %in% ttt),Numb>1000) %>%
+arrange(.,Effect) 
+
+comb=tlnise(PMC$PE,PMC$SD^2, seed = 1234)
+Result1=data.frame(comb$gamma) %>%
+mutate(.,Effect=round(est*IQR,2),LCI=(est-1.96*se)*IQR,UCI=(est+1.96*se)*IQR,CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,Effect,CIs)
+Result1
+
+
+tt=filter(out3,Effect>15,Numb>1000) %>% arrange(.,Numb)
+tt2=group_by(tt,Name) %>% summarize(EFM=mean(Effect))
+ttt=tt$FIPS_County
+##By State
+out4=data.frame()
+State_list=unique(out3$Name)
+
+for (i in 1:length(State_list)){
+tryCatch({ 
+PMC_State=filter(PMC,Name==State_list[i])
+comb=tlnise(PMC_State$PE,PMC_State$SD^2, seed = 1234)
+Result1=data.frame(comb$gamma) %>%
+mutate(.,Effect=round(est*IQR,2),LCI=(est-1.96*se)*IQR,UCI=(est+1.96*se)*IQR,CIs=paste(Effect,' [',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,est,se,Effect,CIs)
+Result1$Name=State_list[i]
+Result1$Numb=dim(PMC_State)[1]
+out4=rbind(out4,Result1)
+rm(PMC_State,comb,Result1)
+}, error=function(e){})
+}
+
+comb=tlnise(out4$est,out4$se^2, seed = 1234)
+Result2=data.frame(comb$gamma) %>%
+mutate(.,Effect=round(est*IQR,2),LCI=(est-1.96*se)*IQR,UCI=(est+1.96*se)*IQR,CIs=paste(Effect,' [',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,Effect,CIs)
+
+## By Region
+out5=data.frame()
+RegionList=unique(out3$RegionName)
+PMC2=filter(PMC,FIPS_County!='56033',FIPS_County!='06045',FIPS_County!='32031',FIPS_County!='41051')
+for (i in 1:length(RegionList)){
+PMC_State=filter(PMC2,RegionName==RegionList[i])
+comb=tlnise(PMC_State$PE,PMC_State$SD^2, seed = 1234)
+Result1=data.frame(comb$gamma) %>%
+mutate(.,Effect=round(est*IQR,2),LCI=(est-1.96*se)*IQR,UCI=(est+1.96*se)*IQR,CIs=paste(Effect,' [',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,est,se,Effect,CIs)
+Result1$Name=RegionList[i]
+Result1$Numb=dim(PMC_State)[1]
+out5=rbind(out5,Result1)
+rm(PMC_State,comb,Result1)
+}
+
+out5
+
+
+
+head(out2)
+extr=filter(out3,Name=='California',Effect>0) %>% arrange(.,Numb)
+
+
+
+IQR=4.67
+
+PMCoarseEffect=filter(out2,Pol=='PM25') %>%
+mutate(.,Effect=PE*IQR,LCI=(PE-1.96*SD)*IQR,UCI=(PE+1.96*SD)*IQR,CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,FIPS_County,Effect,CIs,round(Pvalue,4),PE,SD) %>%
+filter(.,Pvalue<0.05) %>%
+# filter(.,substr(FIPS_County,1,2)=='48') %>%
+arrange(.,-(Effect))
+
+
+#texas=filter(bwdata,substr(FIPS_County,1,2)==40)
+texas=filter(bwdata,RegionName=='South')
+#Co-pollutant model
+Model3=biglm(dbirwt~PMCoarse_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+Name+season+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=texas)
+summary(Model3)
+
+
+effect=filter(out2,Pol=='PM25') %>%
+mutate(.,Effect=PE*IQR,LCI=(PE-1.96*SD)*IQR,UCI=(PE+1.96*SD)*IQR,CIs=paste('[',round(LCI,2),', ',round(UCI,2),']',sep='')) %>%
+select(.,FIPS_County,Effect,CIs,round(Pvalue,4),PE,SD) %>%
+filter(.,Pvalue<0.125) %>%
+# filter(.,substr(FIPS_County,1,2)=='48') %>%
+arrange(.,-(Effect))
+
+texas2_list=group_by(texas,FIPS_County) %>%
+summarize(PM25_Ave=mean(PM25_Exposure,na.rm=TRUE),PMC_Ave=mean(PMCoarse_Exposure,na.rm=TRUE),BWMean=mean(dbirwt),numb=n()) %>%
+arrange(.,numb,PM25_Ave) %>%
+data.frame()
+texas2_list
+
+p=ggplot(texas2,aes(x=PM25_Ave,y=BWMean))+ geom_point()
+
+pdf(paste(output_location,'test.pdf',paste=''),15,10)
+p
+dev.off()
+
+filter(texas2_list,BWMean>3450)
+filter(texas2_list,PM25_Ave<8.5)
+
+#listc=c('48303','48201','48113','48439','12011','12099','12071','37183')
+listc=c('12011','12099','12071','48113')
+listc=c('12011','12099','12071')
+
+texas2=filter(texas,!(FIPS_County %in% listc))
+Model3=biglm(dbirwt~PMCoarse_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+Name+season+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=texas2)
+summary(Model3)
+
+
+filter(texas,!(FIPS_County %in% listc)) %>%
+summarize(PM25_Ave=mean(PM25_Exposure,na.rm=TRUE),PMC_Ave=mean(PMCoarse_Exposure,na.rm=TRUE),BWMean=mean(dbirwt))
+
+filter(texas,(FIPS_County %in% listc)) %>%
+group_by(.,FIPS_County) %>%
+summarize(PM25_Ave=mean(PM25_Exposure,na.rm=TRUE),PMC_Ave=mean(PMCoarse_Exposure,na.rm=TRUE),BWMean=mean(dbirwt))
+
+
+mean(texas$PM25_Exposure)
+mean(texas$PMCoarse_Exposure)
+mean(texas$dbirwt)
+
+
+filter(out2,Pol=='PM25')%>%
+filter(.,FIPS_County %in% listc)
+
+table(substr(unique(texas2$FIPS_County),1,2)
+
+
+CA=filter(bwdata,FIPS_County=='06037')
+CA=filter(bwdata,Name=='California')
+
+Model3=biglm(dbirwt~PMCoarse_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+Name+season+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=CA)
+summary(Model3)
+Model3=biglm(dbirwt~PM25_Exposure,data=CA)
+summary(Model3)
+
+
+bw_exp=select(CA,PM25_Exposure,PMCoarse_Exposure)
+cor(bw_exp)
+rm(bw_exp)
