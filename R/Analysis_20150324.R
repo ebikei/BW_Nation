@@ -1,3 +1,6 @@
+#jhpce01.jhsph.edu
+#qrsh -l mf=16G,h_vmem=32G 
+
 x<-c('dplyr','data.table','biglm')
 lapply(x,require,character.only=T)
 setwd('/home/bst/other/kebisu/BW_PMCoarse/Data')
@@ -5,8 +8,21 @@ output_location=c('/home/bst/other/kebisu/BW_PMCoarse/Result/')
 
 
 load('BirthData/BWData_C_20150322.RData') #BWData_C
+BWData_C=data.table(BWData_C) %>% setkey(ID)
+load('BirthData/BWData_25_20150322.RData') #BWData_25
+BWData_25=select(BWData_25,ID,PM25_Exposure,FIPS_PM25Monitor,Distance_PM25) %>% data.table() %>% setkey(ID)
+load('BirthData/BWData_10_20150322.RData') #BWData_10
+BWData_10=select(BWData_10,ID,PM10_Exposure,FIPS_PM10Monitor,Distance_PM10) %>% data.table() %>% setkey(ID)
+BWData_C=BWData_25[BWData_C]
+BWData_C=BWData_10[BWData_C]
 
-State_FIPS=read.csv('state_geocodes.csv')
+BWData_C=select(BWData_C,ID,FIPS_County,LMPDate2,BD_15,BD_Est,PMC_Exposure,PM10_Exposure,PM25_Exposure,FIPS_PMCMonitor,Distance_PMC,FIPS_PM10Monitor,Distance_PM10,FIPS_PM25Monitor,Distance_PM25,dbirwt,dgestat,mage8,pldel3,mrace3,meduc6,dmar,totord9,monpre,nprevis,dfage,csex,dplural,fmaps,delmeth5,diabetes,tobacco,alcohol,wtgain,frace3,First_AT,Second_AT,Third_AT) %>%
+					arrange(FIPS_County,LMPDate2) %>%
+					data.frame()
+rm(BWData_10,BWData_25)
+
+State_FIPS=read.csv('state_geocodes.csv') %>% filter(Name!='Alaska',Name!='Hawaii')
+State_FIPS$Name=as.character(State_FIPS$Name)
 names(State_FIPS)[5:6]=c('RegionName','DivisionName')
 State_FIPS$State.Code=sprintf("%02d",State_FIPS$St_FIPS)
 State_FIPS=State_FIPS[order(State_FIPS$State.Code),]
@@ -94,16 +110,49 @@ bwdata=merge(bwdata,NBH_Stat,by='FIPS_County')
 setkey(bwdata,State.Code)
 bwdata=merge(bwdata,State_FIPS,by='State.Code')
 
+## Check Correlation by FIPS_County
+County_List=unique(bwdata$FIPS_County)
+cr=data.frame()
+pb=txtProgressBar(min=0,max=length(County_List), style = 3)
+ptm=proc.time()
+for (i in 1:length(County_List)){
+	tryCatch({
+	Sys.sleep(0.1)	
+	bwdata2=filter(bwdata,FIPS_County==County_List[i])
+	bw_exp=select(bwdata2,PM25_Exposure,PMC_Exposure)
+	cr1=data.frame(County_List[i],cor(bw_exp)[1,2],dim(bwdata2)[1])
+	cr=rbind(cr,cr1)
+	rm(cr1)
+	setTxtProgressBar(pb, i)
+	}, error=function(e){})
+}
+proc.time()-ptm
+close(pb)
+names(cr)=c('FIPS_County','R','Num')
+cr2=filter(cr,abs(R)>0.6)
+ExtremeCor2=cr2$FIPS_County
+bwdata2=filter(bwdata,!(FIPS_County %in% ExtremeCor2))
+#Remove county which is less than 100 and less than 4yr data county
+test=data.frame(table(bwdata2$FIPS_County,bwdata2$year)) %>% filter(.,Freq>100)
+test2=data.frame(table(test$Var1)) %>% filter(.,Freq>4) %>% select(.,Var1)
+bwdata=filter(bwdata2,FIPS_County %in% test2$Var1)
+rm(bwdata2)
+
 Model1=biglm(dbirwt~PMC_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata)
 summary(Model1)
-
+Model2=biglm(dbirwt~PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata)
+summary(Model2)
+Model3=biglm(dbirwt~PM10_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata)
+summary(Model3)
+Model4=biglm(dbirwt~PMC_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+alcohol+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata)
+summary(Model4)
 
 Region4=c('Northeast','Midwest','South','West')
 out2=data.frame()
 
 for (i in 1:4){
 	bwdata4=filter(bwdata,RegionName==Region4[i])
-	Model5=lm(dbirwt~PMC_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata4)
+	Model5=lm(dbirwt~PMC_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata4)
 	test=data.frame(Region4[i],summary(Model5)$coefficients[c(2:3),])
 	test$Pol=c('PMCoarse','PM25')
 	test$Numb=dim(bwdata4)[1]
@@ -114,3 +163,33 @@ row.names(out2)=c(1:dim(out2)[1])
 names(out2)=c('Name','PE','SD','t','Pvalue','Pol','Numb') 
 out3=filter(out2,Pol=='PMCoarse') %>% arrange(.,Name)
 out3
+
+i=4
+Region4[i]
+bwdata4=filter(bwdata,RegionName==Region4[i]) %>% filter(!is.na(PM25_Exposure),!is.na(PMC_Exposure))
+bw_exp=select(bwdata4,PM25_Exposure,PMC_Exposure) %>% data.frame()
+cor(bw_exp)[1,2]
+
+bwdata=mutate(bwdata,hyp_PMC=PM10_Exposure-PM25_Exposure,dif=PMC_Exposure-hyp_PMC)
+summary(bwdata$dif)
+tt=filter(bwdata,abs(dif)>25)
+
+bwdata=filter(bwdata,FIPS_County!='48141')
+
+out2=data.frame()
+bwdata4=filter(bwdata,RegionName=='Midwest')
+for (i in 1:length(unique(bwdata4$FIPS_County))){
+	bwdata5=filter(bwdata4,FIPS_County!=unique(FIPS_County)[i])
+	Model5=lm(dbirwt~PMC_Exposure+PM25_Exposure+gest_cat+mage8+mrace3+meduc6+dmar+csex+totord9+monpre+tobacco+year+season+Name+LessThanHS+LessThanPov_Line+First_AT+Second_AT+Third_AT,data=bwdata5)
+	test=data.frame(summary(Model5)$coefficients[c(2:3),])
+	test$Pol=c('PMCoarse','PM25')
+	test$Numb=dim(bwdata5)[1]
+	test$fips=unique(bwdata4$FIPS_County)[i]
+	out2=rbind(out2,test)
+	rm(bwdata5,Model5,test)
+}
+
+filter(out2,Pol=='PM25') %>% arrange(Estimate)
+filter(out2,Pol=='PMCoarse') %>% arrange(Estimate)
+
+Check ID 2006-37023
